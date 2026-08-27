@@ -1,0 +1,14 @@
+# single node cluster so not using StorageClass. Using hostPath instead
+# WILL BREAK if more that one node in cluster
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: vllm-cache-pv
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 30Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/vllm-cache
