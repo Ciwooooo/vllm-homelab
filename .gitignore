@@ -1,0 +1,14 @@
+# Secrets
+k8s/secret.yaml
+!k8s/secret.yaml.example
+
+# Helm
+helm/**/charts/
+# compiled helm stuff
+helm/**/*.tgz
+helm/**/Chart.lock
+
+# OS / Editor
+.DS_Store
+.zed/
+*.swp
