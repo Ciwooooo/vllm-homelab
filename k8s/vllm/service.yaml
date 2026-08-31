@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm
+  namespace: vllm
+spec: # defaults to type:ClusterIP
+  ports:
+  - port: 8000 # where the container listens on (same as containerPort in deployment)
+    targetPort: 8000 # what the service exposes inside the cluster)
+    protocol: TCP
+    name: http
+  selector:
+    app: vllm
