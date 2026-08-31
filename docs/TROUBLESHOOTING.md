@@ -88,3 +88,49 @@ kubectl get runtimeclass                    # nvidia RuntimeClass exists
 kubectl get pods -n nvidia-device-plugin    # plugin pod Running, not restarting
 kubectl describe node | grep -A8 Allocatable # nvidia.com/gpu: 1 present
 ```
+
+
+## Pod crashes with "VLLM_PORT ... appears to be a URI"
+
+Full error, buried in the EngineCore traceback:
+
+ValueError: VLLM_PORT 'tcp://10.43.250.121:8000' appears to be a URI.
+This may be caused by a Kubernetes service discovery issue
+
+
+**Cause:** Kubernetes automatically injects environment variables into every
+pod for every Service that exists in the same namespace, using a legacy
+Docker-links-style naming convention: `<SERVICE_NAME>_SERVICE_HOST`,
+`<SERVICE_NAME>_PORT`, etc. (all uppercased). Our vLLM Service is named
+`vllm`, exposing port `8000` — so Kubernetes auto-injects a variable
+literally named `VLLM_PORT` set to `tcp://<clusterIP>:8000`.
+
+vLLM *also* reads an environment variable called `VLLM_PORT` for its own
+configuration, expecting a plain integer. The name collision means
+Kubernetes' auto-injected value silently overwrites what vLLM expects, and
+vLLM crashes trying to parse a URI as a port number.
+
+This is specific to naming the Service the same as (or matching a prefix
+recognized by) the application inside it — a Service named something else
+(e.g. `mistral-api`) wouldn't collide with `VLLM_PORT` at all. Worth knowing
+this class of bug exists any time an app reads its own config from env
+vars with a common/short name (`PORT`, `HOST`, etc.) — the more generic the
+name, the more likely a same-namespace Service collides with it.
+
+**Fix:** disable this legacy env var injection for the pod, since we use
+DNS-based service discovery (`vllm.vllm.svc.cluster.local`) instead, which
+doesn't have this collision problem:
+```yaml
+spec:
+  template:
+    spec:
+      enableServiceLinks: false   # pod-spec level, sibling of containers:
+      containers:
+      - name: vllm
+        ...
+```
+
+**Sanity check if this happens again:** exec into a running pod (or check
+`kubectl describe pod` env section) and look for auto-injected
+`<NAME>_SERVICE_HOST` / `<NAME>_PORT` variables matching any Service in the
+namespace — that's the signature of this exact issue, not a vLLM bug.
