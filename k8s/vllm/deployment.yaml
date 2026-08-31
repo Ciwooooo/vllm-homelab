@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm
+  namespace: vllm
+  labels:
+    app: vllm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm
+  template:
+    metadata:
+      labels:
+        app: vllm
+    spec:
+      runtimeClassName: nvidia
+      containers:
+      - name: vllm
+        image: vllm/vllm-openai:v0.28.0
+        command: ["vllm", "serve"]
+        args:
+          - "Qwen/Qwen3-1.7B"
+          - "-- host=0.0.0.0"
+          - "-- port=8000"
+          - "-- max-model-len=2048"
+          - "gpu-memory-utilization=0.85"
+        ports:
+          - containerPort: 8000
+            name: http
+        resources:
+          limits:
+            cpu: 4
+            memory: 10Gi
+            nvidia.com/gpu: 1
+        volumeMounts:
+        - name: model-cache # local reference name
+          mountPath: /root/.cache/huggingface
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30 # how long to wait before first probe
+          periodSeconds: 10 # how often to repeat
+          failureThreshold: 30 # how many times it can fail before considered unhealthy
+      volumes:
+      - name: model-cache # local reference name
+        persistentVolumeClaim:
+          claimName: vllm-cache-pvc # actual storage source
