@@ -18,6 +18,7 @@ spec:
         app: vllm
     spec:
       runtimeClassName: nvidia
+      enableServiceLinks: false # disable legacy env var injection
       containers:
       - name: vllm
         image: vllm/vllm-openai:v0.28.0
