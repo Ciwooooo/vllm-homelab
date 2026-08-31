@@ -7,6 +7,8 @@ metadata:
     app: vllm
 spec:
   replicas: 1
+  strategy:
+    type: Recreate # only one pod can hold the gpu, cant do rolling updates
   selector:
     matchLabels:
       app: vllm
@@ -22,10 +24,12 @@ spec:
         command: ["vllm", "serve"]
         args:
           - "Qwen/Qwen3-1.7B"
-          - "-- host=0.0.0.0"
-          - "-- port=8000"
-          - "-- max-model-len=2048"
-          - "gpu-memory-utilization=0.85"
+          - "--host=0.0.0.0"
+          - "--port=8000"
+          - "--dtype=float16" # set explicitly
+          - "--max-model-len=2048"
+          - "--gpu-memory-utilization=0.92"
+          - "--enforce-eager" # disable graph capture, slower but less vram
         ports:
           - containerPort: 8000
             name: http
