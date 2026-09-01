@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vllm.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "vllm.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # only one pod can hold the gpu, cant do rolling updates
+  selector:
+    matchLabels:
+      {{- include "vllm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "vllm.selectorLabels" . | nindent 8 }}
+    spec:
+      runtimeClassName: nvidia
+      enableServiceLinks: false # disable legacy env var injection
+      containers:
+      - name: vllm
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        command: ["vllm", "serve"]
+        args:
+          - "{{ .Values.model.name }}"
+          {{- if .Values.model.quantization }}
+          - "--quantization={{ .Values.model.quantization }}"
+          {{- end }}
+          - "--host=0.0.0.0"
+          - "--port=8000"
+          - "--dtype=float16" # set explicitly
+          - "--max-model-len={{ .Values.server.maxModelLen }}"
+          - "--gpu-memory-utilization={{ .Values.server.gpuMemoryUtilization }}"
+          {{- if .Values.server.enforceEager }}
+          - "--enforce-eager" # disable graph capture, slower but less vram
+          {{- end }}
+        ports:
+          - containerPort: 8000
+            name: http
+          {{- if .Values.huggingface.tokenSecretEnabled -}}
+          env:
+          - name: HUGGING_FACE_HUB_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.huggingface.existingSecret | default (printf "%s-hf-token" (include "vllm.fullname" .)) }}
+                key: {{ .Values.huggingface.existingSecretKey }}
+          {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+        - name: model-cache # local reference name
+          mountPath: /root/.cache/huggingface
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30 # how long to wait before first probe
+          periodSeconds: 10 # how often to repeat
+          failureThreshold: 30 # how many times it can fail before considered unhealthy
+      volumes:
+      - name: model-cache # local reference name
+        persistentVolumeClaim:
+          claimName: {{ include "vllm.fullname" . }}-cache-pvc # actual storage source
