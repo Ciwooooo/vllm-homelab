@@ -1,0 +1,32 @@
+model:
+  name: "Qwen/Qwen3-4B-AWQ"
+  quantization: "AWQ"
+
+server:
+  maxModelLen: 2048
+  gpuMemoryUtilization: 0.92
+  enforceEager: true # disables CUDA graph capture. Frees VRAM at a small throughput cost. Needed on 6GB VRAM; likely safe to flip false on a card with more headroom.
+
+image:
+  repository: vllm/vllm-openai
+  tag: "v0.28.0"
+
+resources:
+  limits:
+    cpu: 4
+    memory: 10Gi
+    nvidia.com/gpu: 1
+  requests:
+    cpu: 2
+    memory: 8Gi
+    nvidia.com/gpu: 1
+
+storage:
+  size: 30Gi
+  hostPath: /mnt/vllm-cache
+
+huggingface:
+  tokenSecretEnabled: false
+  token: ""
+  existingSecret: ""
+  existingSecretKey: HUGGING_FACE_HUB_TOKEN
