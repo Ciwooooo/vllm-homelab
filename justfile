@@ -4,7 +4,7 @@
 set shell := ["bash", "-euo", "pipefail", "-c"]
 
 # Current vLLM pod name — re-evaluated on every invocation
-pod := `kubectl get pods -n vllm -l app=vllm -o jsonpath='{.items[0].metadata.name}'`
+pod := `kubectl get pods -n vllm -l app.kubernetes.io/name=vllm -o jsonpath='{.items[0].metadata.name}'`
 
 # Default: show available recipes
 default:
