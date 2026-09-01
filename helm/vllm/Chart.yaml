@@ -1,0 +1,6 @@
+apiVersion: v2
+name: vllm
+description: Self-hosted vLLM OpenAI-compatible API server, GPU-accelerated via k3s.
+type: application
+version: 0.1.0
+appVersion: "latest"
