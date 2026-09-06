@@ -1,11 +1,12 @@
 model:
   name: "Qwen/Qwen3-4B-AWQ"
-  quantization: "AWQ"
+  quantization: ""
 
 server:
   maxModelLen: 2048
   gpuMemoryUtilization: 0.92
   enforceEager: true # disables CUDA graph capture. Frees VRAM at a small throughput cost. Needed on 6GB VRAM; likely safe to flip false on a card with more headroom.
+  languageModelOnly: false # only for when loading multimodal models. sets vllm flag to only load the text part of the model
 
 image:
   repository: vllm/vllm-openai
