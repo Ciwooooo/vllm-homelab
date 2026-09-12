@@ -32,6 +32,7 @@ spec:
           - "--port=8000"
           - "--dtype=float16" # set explicitly
           - "--max-model-len={{ .Values.server.maxModelLen }}"
+          - "--max-num-seqs={{ .Values.server.maxNumSeqs }}"
           - "--gpu-memory-utilization={{ .Values.server.gpuMemoryUtilization }}"
           {{- if .Values.server.enforceEager }}
           - "--enforce-eager" # disable graph capture, slower but less vram
